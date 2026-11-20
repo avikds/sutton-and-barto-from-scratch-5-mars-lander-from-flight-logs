@@ -1413,8 +1413,124 @@ def tsitsiklis_van_roy(w0, gamma, epsilon, n_iters):
     # Return the complete sequence of weights.
     return np.asarray(weights, dtype=float)
 
-# Step 19 - baird_counterexample (not yet solved)
-# TODO: implement
+# Step 19 - baird_counterexample
+def baird_features():
+    """
+    Construct the feature matrix for Baird's seven-state
+    counterexample.
+
+    Returns:
+        A float NumPy array of shape (7, 8).
+    """
+
+    # Initialize the seven-state, eight-dimensional feature matrix.
+    X = np.zeros((7, 8), dtype=float)
+
+    # Upper states (0 through 5):
+    # Each state has 2 in its corresponding feature column
+    # and 1 in the final feature column.
+    for i in range(6):
+        X[i, i] = 2.0
+        X[i, 7] = 1.0
+
+    # Seventh state (row 6):
+    # Feature values are 1 in column 6 and 2 in column 7.
+    X[6, 6] = 1.0
+    X[6, 7] = 2.0
+
+    return X
+
+
+def baird_counterexample(n_updates, alpha, rng=None, gamma=0.99):
+    """
+    Reproduce Baird's seven-state counterexample using
+    expected semi-gradient DP or sampled off-policy TD(0).
+
+    Parameters:
+        n_updates: Number of weight updates.
+        alpha: Learning rate.
+        rng: Optional random number generator.
+             None selects expected DP updates.
+             A generator selects sampled off-policy TD(0).
+        gamma: Discount factor (default 0.99).
+
+    Returns:
+        Weight history of shape (n_updates + 1, 8).
+    """
+
+    # Construct the feature matrix.
+    X = baird_features()
+
+    # Initialize the weight vector.
+    w = np.array(
+        [1., 1., 1., 1., 1., 1., 10., 1.],
+        dtype=float
+    )
+
+    # Allocate history, including the initial weight vector.
+    history = np.empty((n_updates + 1, 8), dtype=float)
+    history[0] = w
+
+    # --------------------------------------------------
+    # Expected semi-gradient DP updates.
+    # --------------------------------------------------
+    if rng is None:
+
+        # The target policy always transitions to state 6.
+        x_next = X[6]
+
+        for t in range(n_updates):
+
+            # Calculate expected TD errors for all seven states.
+            delta = gamma * (x_next @ w) - X @ w
+
+            # Apply the average update across all seven states.
+            w += (alpha / 7.0) * (X.T @ delta)
+
+            # Record the updated weights.
+            history[t + 1] = w
+
+    # --------------------------------------------------
+    # Sampled off-policy semi-gradient TD(0).
+    # --------------------------------------------------
+    else:
+
+        # Choose the initial state uniformly from states 0 to 6.
+        state = int(rng.random() * 7)
+
+        for t in range(n_updates):
+
+            # Sample the behaviour-policy action.
+            u = rng.random()
+
+            if u < 6.0 / 7.0:
+
+                # Dashed action: transition to an upper state.
+                next_state = int(u * 7)
+                rho = 0.0
+
+            else:
+
+                # Solid action: transition to the seventh state.
+                next_state = 6
+                rho = 7.0
+
+            # Calculate the one-step TD error.
+            delta = (
+                gamma * (X[next_state] @ w)
+                - X[state] @ w
+            )
+
+            # Apply the importance-weighted TD update.
+            w += alpha * rho * delta * X[state]
+
+            # Move to the next state.
+            state = next_state
+
+            # Record the updated weights.
+            history[t + 1] = w
+
+    return history
 
 # Step 20 - value_error_objectives (not yet solved)
 # TODO: implement

@@ -28,7 +28,7 @@ python scaffold.py
 - [x] **16.** expected_td_sweeps
 - [x] **17.** deadly_triad_postmortem
 - [x] **18.** tsitsiklis_van_roy
-- [ ] **19.** baird_counterexample
+- [x] **19.** baird_counterexample
 - [ ] **20.** value_error_objectives
 - [ ] **21.** td_and_be_solutions
 - [ ] **22.** expected_tdc_sweeps
