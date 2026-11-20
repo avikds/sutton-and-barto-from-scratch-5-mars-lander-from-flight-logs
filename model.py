@@ -1532,8 +1532,133 @@ def baird_counterexample(n_updates, alpha, rng=None, gamma=0.99):
 
     return history
 
-# Step 20 - value_error_objectives (not yet solved)
-# TODO: implement
+# Step 20 - value_error_objectives
+def value_error_objectives(X, w, mu, P, R, v_true, gamma=1.0):
+    """
+    Measure a linear value function against four objectives:
+    Value Error (VE), Bellman Error (BE),
+    Projected Bellman Error (PBE), and
+    Temporal-Difference Error (TDE).
+
+    Parameters:
+        X: Feature matrix of shape (n, d).
+        w: Weight vector of shape (d,).
+        mu: State distribution of shape (n,).
+        P: Transition probability matrix of shape (n, n + 1).
+           The last column represents the terminal state.
+        R: Reward matrix of shape (n, n + 1).
+        v_true: True state values of shape (n,).
+        gamma: Discount factor, defaulting to 1.0.
+
+    Returns:
+        Dictionary containing the four objectives as Python floats.
+    """
+
+    # Convert inputs to floating-point NumPy arrays.
+    X = np.asarray(X, dtype=float)
+    w = np.asarray(w, dtype=float)
+    mu = np.asarray(mu, dtype=float)
+    P = np.asarray(P, dtype=float)
+    R = np.asarray(R, dtype=float)
+    v_true = np.asarray(v_true, dtype=float)
+
+    # Determine the number of states and feature dimensions.
+    n, d = X.shape
+
+    # Validate the input dimensions.
+    if w.shape != (d,):
+        raise ValueError("w must have shape (d,).")
+
+    if mu.shape != (n,):
+        raise ValueError("mu must have shape (n,).")
+
+    if P.shape != (n, n + 1):
+        raise ValueError("P must have shape (n, n + 1).")
+
+    if R.shape != (n, n + 1):
+        raise ValueError("R must have shape (n, n + 1).")
+
+    if v_true.shape != (n,):
+        raise ValueError("v_true must have shape (n,).")
+
+    # Calculate the estimated value of each non-terminal state.
+    v = X @ w
+
+    # Append the terminal state's value, which is always zero.
+    v_all = np.concatenate((v, [0.0]))
+
+    # Calculate the one-step TD error for every state-transition pair.
+    # delta(s, s') = R(s, s') + gamma * v(s') - v(s).
+    td_errors = (
+        R
+        + gamma * v_all[np.newaxis, :]
+        - v[:, np.newaxis]
+    )
+
+    # Calculate the expected Bellman error for each state.
+    # This is the transition-probability-weighted mean TD error.
+    bellman_error = np.sum(
+        P * td_errors,
+        axis=1
+    )
+
+    # Construct the diagonal matrix of state-distribution weights.
+    D = np.diag(mu)
+
+    # Construct the orthogonal projection matrix onto the feature space.
+    # The pseudoinverse handles potentially singular feature matrices.
+    Pi = (
+        X
+        @ np.linalg.pinv(X.T @ D @ X)
+        @ X.T
+        @ D
+    )
+
+    # Project the Bellman error onto the feature space.
+    projected_bellman_error = Pi @ bellman_error
+
+    # -------------------------------------------------------
+    # Objective 1: Value Error (VE).
+    # -------------------------------------------------------
+    VE = np.sum(
+        mu * (v - v_true) ** 2
+    )
+
+    # -------------------------------------------------------
+    # Objective 2: Bellman Error (BE).
+    # -------------------------------------------------------
+    BE = np.sum(
+        mu * bellman_error ** 2
+    )
+
+    # -------------------------------------------------------
+    # Objective 3: Projected Bellman Error (PBE).
+    # -------------------------------------------------------
+    PBE = np.sum(
+        mu * projected_bellman_error ** 2
+    )
+
+    # -------------------------------------------------------
+    # Objective 4: Temporal-Difference Error (TDE).
+    # -------------------------------------------------------
+    # First calculate the expected squared TD error for each state.
+    expected_squared_td = np.sum(
+        P * td_errors ** 2,
+        axis=1
+    )
+
+    # Weight the squared TD errors by the state distribution.
+    TDE = np.sum(
+        mu * expected_squared_td
+    )
+
+    # Return all four objectives as Python floats.
+    return {
+        "VE": float(VE),
+        "BE": float(BE),
+        "PBE": float(PBE),
+        "TDE": float(TDE)
+    }
 
 # Step 21 - td_and_be_solutions (not yet solved)
 # TODO: implement
