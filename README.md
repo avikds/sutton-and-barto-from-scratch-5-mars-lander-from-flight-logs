@@ -17,7 +17,7 @@ python scaffold.py
 - [x] **5.** exact_values
 - [x] **6.** polynomial_features
 - [x] **7.** fourier_features
-- [ ] **8.** rbf_features
+- [x] **8.** rbf_features
 - [ ] **9.** tile_features
 - [ ] **10.** step_size_rule
 - [ ] **11.** semi_gradient_td

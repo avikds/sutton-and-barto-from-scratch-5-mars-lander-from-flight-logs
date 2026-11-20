@@ -560,8 +560,55 @@ def fourier_features(states, order):
 
     return features
 
-# Step 8 - rbf_features (not yet solved)
-# TODO: implement
+# Step 8 - rbf_features
+def rbf_features(states, centers, sigma):
+    """
+    Compute Gaussian radial-basis features for normalized lander states.
+
+    Parameters:
+        states: A single state (h, v, f) or an array of states
+                with shape (n, 3).
+        centers: Array of RBF centers with shape (k, 3),
+                 defined in the normalized state space.
+        sigma: Positive Gaussian width parameter.
+
+    Returns:
+        A float NumPy array of shape (n, k).
+    """
+
+    # Normalize the input states into the [0, 1] range.
+    normalized = unit_states(states)
+
+    # Convert the RBF centers into a floating-point NumPy array.
+    centers = np.asarray(centers, dtype=float)
+
+    # Validate the dimensions of the centers.
+    if centers.ndim != 2 or centers.shape[1] != 3:
+        raise ValueError("centers must have shape (k, 3).")
+
+    # Ensure the Gaussian width is strictly positive.
+    if sigma <= 0:
+        raise ValueError("sigma must be positive.")
+
+    # Calculate the difference between each normalized state
+    # and every RBF center using broadcasting.
+    differences = (
+        normalized[:, np.newaxis, :]
+        - centers[np.newaxis, :, :]
+    )
+
+    # Compute squared Euclidean distances for every state-center pair.
+    squared_distances = np.sum(
+        differences ** 2,
+        axis=2
+    )
+
+    # Apply the Gaussian radial-basis function.
+    features = np.exp(
+        -squared_distances / (2.0 * sigma ** 2)
+    )
+
+    return features
 
 # Step 9 - tile_features (not yet solved)
 # TODO: implement
