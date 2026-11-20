@@ -881,8 +881,77 @@ def lstd(X, X_next, rewards, dones, epsilon=1e-3, rho=None, gamma=1.0):
     # Return the LSTD solution.
     return A_inv @ b
 
-# Step 13 - kernel_value (not yet solved)
-# TODO: implement
+# Step 13 - kernel_value
+def kernel_value(query_states, memory_states, memory_targets, bandwidth):
+    """
+    Predict state values using memory-based Gaussian kernel regression.
+
+    Parameters:
+        query_states: A single state (h, v, f) or an array
+                      of query states with shape (q, 3).
+        memory_states: Stored states with shape (m, 3).
+        memory_targets: Target values corresponding to memory states,
+                        with shape (m,).
+        bandwidth: Positive Gaussian kernel bandwidth.
+
+    Returns:
+        A float NumPy array of shape (q,) containing predicted values.
+    """
+
+    # Normalize query and memory states into the unit cube.
+    query_unit = unit_states(query_states)
+    memory_unit = unit_states(memory_states)
+
+    # Convert memory targets into a floating-point array.
+    memory_targets = np.asarray(memory_targets, dtype=float)
+
+    # Validate the memory targets.
+    if memory_targets.shape != (memory_unit.shape[0],):
+        raise ValueError(
+            "memory_targets must contain one value per memory state."
+        )
+
+    # Ensure the bandwidth is strictly positive.
+    if bandwidth <= 0:
+        raise ValueError("bandwidth must be positive.")
+
+    # Compute squared Euclidean distances between every query
+    # state and every stored memory state.
+    differences = (
+        query_unit[:, np.newaxis, :]
+        - memory_unit[np.newaxis, :, :]
+    )
+
+    squared_distances = np.sum(
+        differences ** 2,
+        axis=2
+    )
+
+    # Subtract the minimum squared distance in each query row
+    # to improve numerical stability when calculating the weights.
+    min_distances = np.min(
+        squared_distances,
+        axis=1,
+        keepdims=True
+    )
+
+    shifted_distances = squared_distances - min_distances
+
+    # Calculate Gaussian kernel weights.
+    weights = np.exp(
+        -shifted_distances / (2.0 * bandwidth ** 2)
+    )
+
+    # Compute the weighted average of the memory target values.
+    weighted_targets = weights @ memory_targets
+
+    # Normalize by the total kernel weight for each query.
+    predictions = weighted_targets / np.sum(
+        weights,
+        axis=1
+    )
+
+    return predictions
 
 # Step 14 - interest_emphasis_td (not yet solved)
 # TODO: implement

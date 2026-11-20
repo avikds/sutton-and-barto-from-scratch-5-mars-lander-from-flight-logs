@@ -22,7 +22,7 @@ python scaffold.py
 - [x] **10.** step_size_rule
 - [x] **11.** semi_gradient_td
 - [x] **12.** lstd
-- [ ] **13.** kernel_value
+- [x] **13.** kernel_value
 - [ ] **14.** interest_emphasis_td
 - [ ] **15.** importance_ratios
 - [ ] **16.** expected_td_sweeps
