@@ -1945,8 +1945,103 @@ def follow_on_emphasis(rho, dones, gamma=1.0, interest=None):
 
     return emphasis
 
-# Step 24 - td_lambda (not yet solved)
-# TODO: implement
+# Step 24 - td_lambda
+def td_lambda(X, X_next, rewards, dones, alpha, lam,
+              true_online=False, gamma=1.0):
+    """
+    Run one online pass of linear TD(lambda).
+
+    Supports:
+        1. Standard accumulating eligibility traces.
+        2. True Online TD(lambda) using Dutch traces.
+
+    Parameters:
+        X: Current-state feature matrix, shape (T, d).
+        X_next: Next-state feature matrix, shape (T, d).
+        rewards: Reward array, shape (T,).
+        dones: Boolean terminal-transition array, shape (T,).
+        alpha: Learning rate.
+        lam: Eligibility trace decay parameter.
+        true_online: Selects True Online TD(lambda) when True.
+        gamma: Discount factor, defaulting to 1.0.
+
+    Returns:
+        Final weight vector of shape (d,).
+    """
+
+    # Convert inputs into NumPy arrays without modifying originals.
+    X = np.asarray(X, dtype=float)
+    X_next = np.array(X_next, dtype=float, copy=True)
+    rewards = np.asarray(rewards, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+
+    # Determine the number of transitions and feature dimensions.
+    T, d = X.shape
+
+    # Validate input dimensions.
+    if X_next.shape != (T, d):
+        raise ValueError("X_next must have the same shape as X.")
+
+    if rewards.shape != (T,) or dones.shape != (T,):
+        raise ValueError("rewards and dones must have shape (T,).")
+
+    # Terminal next states have zero continuation value.
+    X_next[dones] = 0.0
+
+    # Initialize the value-function weights.
+    w = np.zeros(d, dtype=float)
+
+    # Initialize eligibility traces.
+    z = np.zeros(d, dtype=float)
+
+    # Initialize the previous next-state value estimate.
+    v_old = 0.0
+
+    # Process every transition sequentially.
+    for t in range(T):
+
+        # Retrieve the current and next-state feature vectors.
+        x = X[t]
+        x_next = X_next[t]
+
+        # Calculate value estimates using the current weights.
+        V = float(w @ x)
+        V_next = float(w @ x_next)
+
+        # Calculate the one-step temporal-difference error.
+        delta = rewards[t] + gamma * V_next - V
+
+        if true_online:
+
+            # True Online TD(lambda): Dutch eligibility traces.
+            z = (
+                gamma * lam * z
+                + (1.0 - alpha * gamma * lam * (z @ x)) * x
+            )
+
+            # Apply the true online weight correction.
+            w += (
+                alpha * (delta + V - v_old) * z
+                - alpha * (V - v_old) * x
+            )
+
+            # Store the pre-update next-state value.
+            v_old = V_next
+
+        else:
+
+            # Standard TD(lambda): accumulating eligibility traces.
+            z = gamma * lam * z + x
+
+            # Apply the accumulating-trace weight update.
+            w += alpha * delta * z
+
+        # Reset traces at the end of each episode.
+        if dones[t]:
+            z.fill(0.0)
+            v_old = 0.0
+
+    return w
 
 # Step 25 - go_no_go_table (not yet solved)
 # TODO: implement

@@ -33,7 +33,7 @@ python scaffold.py
 - [x] **21.** td_and_be_solutions
 - [x] **22.** expected_tdc_sweeps
 - [x] **23.** follow_on_emphasis
-- [ ] **24.** td_lambda
+- [x] **24.** td_lambda
 - [ ] **25.** go_no_go_table
 
 ---
