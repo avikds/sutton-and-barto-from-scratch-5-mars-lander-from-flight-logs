@@ -15,7 +15,7 @@ python scaffold.py
 - [x] **3.** fly
 - [x] **4.** landing_rate
 - [x] **5.** exact_values
-- [ ] **6.** polynomial_features
+- [x] **6.** polynomial_features
 - [ ] **7.** fourier_features
 - [ ] **8.** rbf_features
 - [ ] **9.** tile_features

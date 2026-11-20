@@ -427,8 +427,66 @@ def exact_values(kind, tol=1e-12):
     # Restore the original three-dimensional state-value structure.
     return values.reshape(value_shape)
 
-# Step 6 - polynomial_features (not yet solved)
-# TODO: implement
+# Step 6 - polynomial_features
+import itertools
+
+
+def polynomial_features(states, order=1, scale=None):
+    """
+    Build an order-based polynomial feature representation
+    of the lander's telemetry.
+
+    Parameters:
+        states: A single state (h, v, f) or an array of states
+                with shape (n, 3).
+        order: Maximum exponent for each state variable.
+        scale: Optional scaling array for the feature columns.
+
+    Returns:
+        A float NumPy array of shape (n, (order + 1) ** 3).
+    """
+
+    # Convert input states to a floating-point NumPy array.
+    states = np.asarray(states, dtype=float)
+
+    # Ensure a single state is represented as a two-dimensional array.
+    if states.ndim == 1:
+        states = states.reshape(1, -1)
+
+    # Validate that each state contains exactly three components.
+    if states.ndim != 2 or states.shape[1] != 3:
+        raise ValueError("states must have shape (n, 3) or contain one state.")
+
+    # Generate all exponent combinations in the required order.
+    # Each exponent vector is (c_h, c_v, c_f).
+    exponents = np.array(
+        list(itertools.product(range(order + 1), repeat=3)),
+        dtype=int
+    )
+
+    # Extract altitude, velocity and fuel for vectorized computation.
+    # Shape of states: (n, 3)
+    # Shape of exponents: ((order + 1) ** 3, 3)
+
+    # Calculate every polynomial feature:
+    # h**c_h * v**c_v * f**c_f.
+    features = np.prod(
+        states[:, np.newaxis, :] ** exponents[np.newaxis, :, :],
+        axis=2
+    )
+
+    # Optionally scale each feature column by its corresponding value.
+    if scale is not None:
+        scale = np.asarray(scale, dtype=float)
+
+        if scale.shape != (features.shape[1],):
+            raise ValueError(
+                "scale must contain one value for each feature column."
+            )
+
+        features = features / scale[np.newaxis, :]
+
+    return features
 
 # Step 7 - fourier_features (not yet solved)
 # TODO: implement
