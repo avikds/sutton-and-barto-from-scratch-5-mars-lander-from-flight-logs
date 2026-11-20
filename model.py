@@ -78,8 +78,53 @@ def lander_step(state, action, rng):
 
     return next_state, 0.0, False
 
-# Step 2 - autopilot_probs (not yet solved)
-# TODO: implement
+# Step 2 - autopilot_probs
+def autopilot_probs(state, kind):
+    """
+    Return the action probabilities of the specified autopilot.
+
+    Parameters:
+        state: Tuple (altitude, vertical_velocity, fuel).
+        kind: Either 'cautious' or 'fast'.
+
+    Returns:
+        A float NumPy array of shape (3,) containing
+        probabilities for actions 0, 1, and 2.
+    """
+
+    h, v, f = state
+
+    # Define the target velocity and exploration probability
+    # for the selected autopilot.
+    if kind == "cautious":
+        target = -1
+        eps = 0.2
+
+    elif kind == "fast":
+        target = -3 if h >= 9 else -1
+        eps = 0.15
+
+    else:
+        raise ValueError("Invalid autopilot kind. Use 'cautious' or 'fast'.")
+
+    # Determine the rule-based thrust action.
+    # Action 2: Increase thrust if falling faster than the target.
+    # Action 1: Hold thrust if the velocity matches the target.
+    # Action 0: Reduce fuel consumption if falling slower than the target.
+    if v < target:
+        rule_action = 2
+    elif v == target:
+        rule_action = 1
+    else:
+        rule_action = 0
+
+    # Assign equal exploration probability to all three actions.
+    probs = np.full(3, eps / 3, dtype=float)
+
+    # Add the remaining probability to the rule-based action.
+    probs[rule_action] += 1.0 - eps
+
+    return probs
 
 # Step 3 - fly (not yet solved)
 # TODO: implement

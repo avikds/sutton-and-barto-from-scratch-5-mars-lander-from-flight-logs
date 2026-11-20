@@ -11,7 +11,7 @@ python scaffold.py
 ## Steps
 
 - [x] **1.** lander_step
-- [ ] **2.** autopilot_probs
+- [x] **2.** autopilot_probs
 - [ ] **3.** fly
 - [ ] **4.** landing_rate
 - [ ] **5.** exact_values
