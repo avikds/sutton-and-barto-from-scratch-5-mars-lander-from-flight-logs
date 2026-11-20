@@ -32,7 +32,7 @@ python scaffold.py
 - [x] **20.** value_error_objectives
 - [x] **21.** td_and_be_solutions
 - [x] **22.** expected_tdc_sweeps
-- [ ] **23.** follow_on_emphasis
+- [x] **23.** follow_on_emphasis
 - [ ] **24.** td_lambda
 - [ ] **25.** go_no_go_table
 

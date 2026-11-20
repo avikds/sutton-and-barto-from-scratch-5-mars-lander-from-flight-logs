@@ -1879,8 +1879,71 @@ def expected_tdc_sweeps(
 
     return w, v
 
-# Step 23 - follow_on_emphasis (not yet solved)
-# TODO: implement
+# Step 23 - follow_on_emphasis
+def follow_on_emphasis(rho, dones, gamma=1.0, interest=None):
+    """
+    Compute the follow-on emphasis M_t for one-step
+    emphatic TD along logged flights.
+
+    Parameters:
+        rho: Per-transition importance sampling ratios, shape (T,).
+        dones: Boolean array indicating terminal transitions, shape (T,).
+        gamma: Discount factor, defaulting to 1.0.
+        interest: Optional per-transition interest values.
+                  Defaults to ones.
+
+    Returns:
+        Float NumPy array containing the emphasis M_t
+        for every transition.
+    """
+
+    # Convert inputs to NumPy arrays.
+    rho = np.asarray(rho, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+
+    # Validate input dimensions.
+    if rho.ndim != 1 or dones.ndim != 1:
+        raise ValueError("rho and dones must be one-dimensional arrays.")
+
+    if rho.shape != dones.shape:
+        raise ValueError("rho and dones must have the same shape.")
+
+    # Determine the number of transitions.
+    T = len(rho)
+
+    # Initialize interest to one for every transition if not provided.
+    if interest is None:
+        interest = np.ones(T, dtype=float)
+    else:
+        interest = np.asarray(interest, dtype=float)
+
+        if interest.shape != (T,):
+            raise ValueError("interest must have shape (T,).")
+
+    # Allocate the emphasis array.
+    emphasis = np.zeros(T, dtype=float)
+
+    # The carried emphasis starts at zero.
+    previous_emphasis = 0.0
+
+    # Calculate follow-on emphasis sequentially.
+    for t in range(T):
+
+        # Compute current emphasis using the previous transition's
+        # importance ratio and carried emphasis.
+        emphasis[t] = (
+            gamma * previous_emphasis + interest[t]
+        )
+
+        # Update the carried term for the next transition.
+        # The previous transition's rho is used in the recurrence.
+        previous_emphasis = rho[t] * emphasis[t]
+
+        # Reset the carried emphasis after a terminal transition.
+        if dones[t]:
+            previous_emphasis = 0.0
+
+    return emphasis
 
 # Step 24 - td_lambda (not yet solved)
 # TODO: implement
