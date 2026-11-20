@@ -953,8 +953,69 @@ def kernel_value(query_states, memory_states, memory_targets, bandwidth):
 
     return predictions
 
-# Step 14 - interest_emphasis_td (not yet solved)
-# TODO: implement
+# Step 14 - interest_emphasis_td
+def interest_emphasis_td(n, alpha, n_episodes, use_emphasis):
+    """
+    Reproduce Sutton and Barto's Example 9.4 using
+    n-step semi-gradient TD with optional interest and emphasis.
+
+    Parameters:
+        n: Number of steps for the n-step return.
+        alpha: Step size (learning rate).
+        n_episodes: Number of episodes to simulate.
+        use_emphasis: Whether to apply emphasis weighting.
+
+    Returns:
+        A float NumPy array of shape (2,) containing
+        the learned weights.
+    """
+
+    # Initialize the two shared value-function weights.
+    w = np.zeros(2, dtype=float)
+
+    # States 0 and 1 share weight 0.
+    # States 2 and 3 share weight 1.
+    groups = [0, 0, 1, 1]
+
+    # Interest is assigned only to the first state.
+    interest = [1.0, 0.0, 0.0, 0.0]
+
+    # Run the specified number of episodes.
+    for _ in range(n_episodes):
+
+        # Store emphasis values for the current episode.
+        M = np.zeros(4, dtype=float)
+
+        # Visit states 0, 1, 2, and 3 in order.
+        for t in range(4):
+
+            # Calculate the n-step emphasis.
+            # Previous emphasis is zero when t < n.
+            previous_emphasis = M[t - n] if t >= n else 0.0
+
+            M[t] = interest[t] + previous_emphasis
+
+            # Every step provides a reward of +1.
+            # The episode terminates after state 3.
+            G = float(min(n, 4 - t))
+
+            # Bootstrap from the estimated value when
+            # the n-step horizon ends before termination.
+            if t + n < 4:
+                G += w[groups[t + n]]
+
+            # Apply emphasis when requested.
+            # Otherwise, use the ordinary semi-gradient TD weight.
+            weight = M[t] if use_emphasis else 1.0
+
+            # Identify the shared weight associated with this state.
+            group = groups[t]
+
+            # Update the corresponding weight using the n-step
+            # semi-gradient TD update.
+            w[group] += alpha * weight * (G - w[group])
+
+    return w
 
 # Step 15 - importance_ratios (not yet solved)
 # TODO: implement
