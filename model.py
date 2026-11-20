@@ -2043,6 +2043,74 @@ def td_lambda(X, X_next, rewards, dones, alpha, lam,
 
     return w
 
-# Step 25 - go_no_go_table (not yet solved)
-# TODO: implement
+# Step 25 - go_no_go_table
+def go_no_go_table(estimates, truth, threshold):
+    """
+    Convert estimated landing probabilities into GO/NO-GO decisions
+    and evaluate their correctness against the ground truth.
+
+    Parameters:
+        estimates: Dictionary mapping method names to estimated
+                   landing probabilities (numbers or None).
+        truth: Actual ground-truth landing probability.
+        threshold: Minimum landing probability required for GO.
+
+    Returns:
+        A list of tuples, one per estimation method:
+
+        (method_name, rounded_estimate, decision, correct)
+
+        Diverged estimates return:
+        (method_name, None, "DIVERGED", False).
+    """
+
+    # Determine the correct deployment decision using ground truth.
+    true_call = "GO" if truth >= threshold else "NO-GO"
+
+    # Store the evaluation results in dictionary insertion order.
+    results = []
+
+    # Evaluate every method's estimated landing probability.
+    for name, value in estimates.items():
+
+        # Handle missing estimates.
+        if value is None:
+            results.append(
+                (name, None, "DIVERGED", False)
+            )
+            continue
+
+        # Convert the estimate to a Python float.
+        try:
+            estimate = float(value)
+        except (TypeError, ValueError, OverflowError):
+            results.append(
+                (name, None, "DIVERGED", False)
+            )
+            continue
+
+        # Check for non-finite estimates and excessive magnitudes.
+        if not np.isfinite(estimate) or abs(estimate) > 10:
+            results.append(
+                (name, None, "DIVERGED", False)
+            )
+            continue
+
+        # Determine the method's deployment decision.
+        call = "GO" if estimate >= threshold else "NO-GO"
+
+        # Compare the method's decision against ground truth.
+        correct = call == true_call
+
+        # Append the rounded estimate and evaluation result.
+        results.append(
+            (
+                name,
+                round(float(estimate), 4),
+                call,
+                bool(correct)
+            )
+        )
+
+    return results
 
