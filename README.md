@@ -24,7 +24,7 @@ python scaffold.py
 - [x] **12.** lstd
 - [x] **13.** kernel_value
 - [x] **14.** interest_emphasis_td
-- [ ] **15.** importance_ratios
+- [x] **15.** importance_ratios
 - [ ] **16.** expected_td_sweeps
 - [ ] **17.** deadly_triad_postmortem
 - [ ] **18.** tsitsiklis_van_roy

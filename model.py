@@ -1017,8 +1017,72 @@ def interest_emphasis_td(n, alpha, n_episodes, use_emphasis):
 
     return w
 
-# Step 15 - importance_ratios (not yet solved)
-# TODO: implement
+# Step 15 - importance_ratios
+def importance_ratios(logs):
+    """
+    Compute per-decision and cumulative importance sampling ratios
+    for evaluating the fast autopilot using cautious autopilot logs.
+
+    Parameters:
+        logs: Dictionary containing:
+              - states: Current states, shape (T, 3).
+              - actions: Recorded actions, shape (T,).
+              - dones: Terminal transition indicators, shape (T,).
+
+    Returns:
+        A tuple (rho, rho_to_end) containing:
+        - rho: Per-decision importance sampling ratios.
+        - rho_to_end: Cumulative ratios from each transition
+                      through the end of its flight.
+    """
+
+    # Extract the required flight-log arrays.
+    states = np.asarray(logs["states"])
+    actions = np.asarray(logs["actions"], dtype=int)
+    dones = np.asarray(logs["dones"], dtype=bool)
+
+    T = len(actions)
+
+    # Validate the input dimensions.
+    if states.shape != (T, 3) or dones.shape != (T,):
+        raise ValueError("Inconsistent flight-log array dimensions.")
+
+    # Calculate the per-decision importance sampling ratios.
+    rho = np.empty(T, dtype=float)
+
+    for t in range(T):
+
+        state = states[t]
+        action = actions[t]
+
+        # Probability of the recorded action under the target policy.
+        target_prob = autopilot_probs(state, "fast")[action]
+
+        # Probability of the recorded action under the behaviour policy.
+        behaviour_prob = autopilot_probs(state, "cautious")[action]
+
+        # Target-policy / behaviour-policy probability ratio.
+        rho[t] = target_prob / behaviour_prob
+
+    # Calculate cumulative importance ratios independently per flight.
+    rho_to_end = np.empty(T, dtype=float)
+    product = 1.0
+
+    # Traverse transitions backwards.
+    for t in range(T - 1, -1, -1):
+
+        # Reset BEFORE processing a terminal row when another
+        # flight follows it in the chronological data.
+        if t < T - 1 and dones[t]:
+            product = 1.0
+
+        # Include the current transition's ratio.
+        product *= rho[t]
+
+        # Store the cumulative ratio through flight termination.
+        rho_to_end[t] = product
+
+    return rho, rho_to_end
 
 # Step 16 - expected_td_sweeps (not yet solved)
 # TODO: implement
