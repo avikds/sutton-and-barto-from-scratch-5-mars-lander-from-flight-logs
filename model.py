@@ -255,8 +255,177 @@ def landing_rate(kind, n_flights, rng, start=START):
     # Calculate the mean final reward (Monte Carlo landing rate).
     return float(np.mean(final_rewards))
 
-# Step 5 - exact_values (not yet solved)
-# TODO: implement
+# Step 5 - exact_values
+class FixedDraw:
+    def __init__(self, u):
+        self.u = u
+
+    def random(self):
+        return self.u
+
+
+def exact_values(kind, tol=1e-12):
+    """
+    Compute the exact landing probability of every state
+    under the specified autopilot using iterative policy evaluation.
+
+    Parameters:
+        kind: Autopilot type ('cautious' or 'fast').
+        tol: Convergence tolerance.
+
+    Returns:
+        A float NumPy array of shape:
+        (MAX_ALTITUDE + 1, 2 * MAX_SPEED + 1, MAX_FUEL + 1).
+
+        V[h, v + MAX_SPEED, f] represents the probability
+        of landing safely from state (h, v, f).
+    """
+
+    # Define the shape of the state-value array.
+    value_shape = (
+        MAX_ALTITUDE + 1,
+        2 * MAX_SPEED + 1,
+        MAX_FUEL + 1
+    )
+
+    # Enumerate all non-terminal states.
+    nonterminal_states = [
+        (h, v, f)
+        for h in range(1, MAX_ALTITUDE + 1)
+        for v in range(-MAX_SPEED, MAX_SPEED + 1)
+        for f in range(MAX_FUEL + 1)
+    ]
+
+    n_states = len(nonterminal_states)
+
+    # Each state has 3 possible actions and 3 possible gust outcomes.
+    n_outcomes = 3 * 3
+
+    # Allocate arrays to store state indices and transition information.
+    state_indices = np.empty(n_states, dtype=np.intp)
+
+    next_indices = np.empty(
+        (n_states, n_outcomes),
+        dtype=np.intp
+    )
+
+    rewards = np.empty(
+        (n_states, n_outcomes),
+        dtype=float
+    )
+
+    probabilities = np.empty(
+        (n_states, n_outcomes),
+        dtype=float
+    )
+
+    # Gust values are determined by the FixedDraw input.
+    # Their corresponding probabilities are 0.1, 0.8 and 0.1.
+    gust_outcomes = (
+        (0.05, 0.1),
+        (0.50, 0.8),
+        (0.95, 0.1)
+    )
+
+    # Precompute all possible transitions for every non-terminal state.
+    for i, state in enumerate(nonterminal_states):
+
+        h, v, f = state
+
+        # Convert the current state into its flattened array index.
+        state_indices[i] = np.ravel_multi_index(
+            (h, v + MAX_SPEED, f),
+            value_shape
+        )
+
+        # Obtain the autopilot's action probability distribution.
+        action_probs = autopilot_probs(state, kind)
+
+        outcome_idx = 0
+
+        # Enumerate all three possible thrust actions.
+        for action in range(3):
+
+            # Enumerate all three possible gust outcomes.
+            for gust_draw, gust_prob in gust_outcomes:
+
+                # Simulate one transition using a fixed gust.
+                next_state, reward, done = lander_step(
+                    state,
+                    action,
+                    FixedDraw(gust_draw)
+                )
+
+                # Store a terminal index for touchdown.
+                # Terminal states always have value zero.
+                if done:
+                    next_index = 0
+
+                else:
+                    # Convert the next non-terminal state
+                    # into its flattened array index.
+                    next_index = np.ravel_multi_index(
+                        (
+                            next_state[0],
+                            next_state[1] + MAX_SPEED,
+                            next_state[2]
+                        ),
+                        value_shape
+                    )
+
+                # Record the next-state index and immediate reward.
+                next_indices[i, outcome_idx] = next_index
+                rewards[i, outcome_idx] = reward
+
+                # Calculate the joint probability of this outcome:
+                # policy action probability * gust probability.
+                probabilities[i, outcome_idx] = (
+                    action_probs[action] * gust_prob
+                )
+
+                outcome_idx += 1
+
+    # Initialize all state values to zero.
+    # This also ensures all touchdown states remain terminal.
+    values = np.zeros(
+        int(np.prod(value_shape)),
+        dtype=float
+    )
+
+    # Perform synchronous iterative policy evaluation.
+    while True:
+
+        # Calculate the expected return for every transition.
+        # Values from the previous iteration are used throughout.
+        targets = rewards + values[next_indices]
+
+        # Compute the updated value of every non-terminal state.
+        updated_nonterminal = np.sum(
+            probabilities * targets,
+            axis=1
+        )
+
+        # Measure the maximum change in state values.
+        delta = np.max(
+            np.abs(
+                updated_nonterminal - values[state_indices]
+            )
+        )
+
+        # Create a new value array to preserve synchronous updates.
+        updated_values = values.copy()
+
+        # Update all non-terminal states simultaneously.
+        updated_values[state_indices] = updated_nonterminal
+
+        values = updated_values
+
+        # Stop when the largest value change is below tolerance.
+        if delta < tol:
+            break
+
+    # Restore the original three-dimensional state-value structure.
+    return values.reshape(value_shape)
 
 # Step 6 - polynomial_features (not yet solved)
 # TODO: implement

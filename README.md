@@ -14,7 +14,7 @@ python scaffold.py
 - [x] **2.** autopilot_probs
 - [x] **3.** fly
 - [x] **4.** landing_rate
-- [ ] **5.** exact_values
+- [x] **5.** exact_values
 - [ ] **6.** polynomial_features
 - [ ] **7.** fourier_features
 - [ ] **8.** rbf_features
