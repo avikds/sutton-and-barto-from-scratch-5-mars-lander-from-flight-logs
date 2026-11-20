@@ -31,7 +31,7 @@ python scaffold.py
 - [x] **19.** baird_counterexample
 - [x] **20.** value_error_objectives
 - [x] **21.** td_and_be_solutions
-- [ ] **22.** expected_tdc_sweeps
+- [x] **22.** expected_tdc_sweeps
 - [ ] **23.** follow_on_emphasis
 - [ ] **24.** td_lambda
 - [ ] **25.** go_no_go_table

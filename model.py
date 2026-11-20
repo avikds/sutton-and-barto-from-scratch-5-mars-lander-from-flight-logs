@@ -1744,8 +1744,140 @@ def td_and_be_solutions(X, mu, P, R, gamma=1.0):
 
     return w_td, w_be
 
-# Step 22 - expected_tdc_sweeps (not yet solved)
-# TODO: implement
+# Step 22 - expected_tdc_sweeps
+def expected_tdc_sweeps(
+    X,
+    X_next,
+    rewards,
+    dones,
+    rho,
+    alpha,
+    beta,
+    n_sweeps,
+    gamma=1.0,
+    gtd2=False,
+    w0=None
+):
+    """
+    Run batch (expected) TDC or GTD2 updates over a dataset
+    of off-policy transitions.
+
+    Parameters:
+        X: Feature matrix of current states, shape (T, d).
+        X_next: Feature matrix of next states, shape (T, d).
+        rewards: Reward array, shape (T,).
+        dones: Boolean array indicating terminal transitions.
+        rho: Per-transition importance sampling ratios, shape (T,).
+        alpha: Primary step size.
+        beta: Secondary step size.
+        n_sweeps: Number of batch update sweeps.
+        gamma: Discount factor, defaulting to 1.0.
+        gtd2: If True, use GTD2; otherwise, use TDC.
+        w0: Optional initial primary weight vector.
+            Defaults to zeros.
+
+    Returns:
+        A tuple (w, v):
+            w: Final primary weight vector, shape (d,).
+            v: Final secondary weight vector, shape (d,).
+    """
+
+    # Convert inputs to floating-point arrays without modifying originals.
+    X = np.asarray(X, dtype=float)
+    X_next = np.array(X_next, dtype=float, copy=True)
+    rewards = np.asarray(rewards, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+    rho = np.asarray(rho, dtype=float)
+
+    # Determine the number of transitions and feature dimensions.
+    T, d = X.shape
+
+    # Validate the input dimensions.
+    if T == 0:
+        raise ValueError("The transition dataset must not be empty.")
+
+    if X_next.shape != (T, d):
+        raise ValueError("X_next must have the same shape as X.")
+
+    if rewards.shape != (T,):
+        raise ValueError("rewards must have shape (T,).")
+
+    if dones.shape != (T,):
+        raise ValueError("dones must have shape (T,).")
+
+    if rho.shape != (T,):
+        raise ValueError("rho must have shape (T,).")
+
+    # Terminal next states have zero value.
+    X_next[dones] = 0.0
+
+    # Initialize the primary weight vector.
+    if w0 is None:
+        w = np.zeros(d, dtype=float)
+    else:
+        w = np.array(w0, dtype=float, copy=True)
+
+        if w.shape != (d,):
+            raise ValueError("w0 must have shape (d,).")
+
+    # Initialize the secondary weight vector.
+    v = np.zeros(d, dtype=float)
+
+    # Perform the specified number of batch update sweeps.
+    for _ in range(n_sweeps):
+
+        # Calculate all TD errors using the current primary weights.
+        delta = (
+            rewards
+            + gamma * (X_next @ w)
+            - (X @ w)
+        )
+
+        # Calculate x_t transpose times v using the current
+        # secondary weights.
+        Xv = X @ v
+
+        # Compute the primary weight update.
+        if gtd2:
+
+            # GTD2 update:
+            # w += alpha / T * sum rho_t *
+            #      (x_t - gamma * x_next_t) * (x_t.T @ v)
+            w_update = np.mean(
+                rho[:, np.newaxis]
+                * (X - gamma * X_next)
+                * Xv[:, np.newaxis],
+                axis=0
+            )
+
+        else:
+
+            # TDC update:
+            # w += alpha / T * sum rho_t *
+            #      (delta_t * x_t - gamma * x_next_t * (x_t.T @ v))
+            w_update = np.mean(
+                rho[:, np.newaxis]
+                * (
+                    delta[:, np.newaxis] * X
+                    - gamma * X_next * Xv[:, np.newaxis]
+                ),
+                axis=0
+            )
+
+        # Compute the secondary weight update using the OLD
+        # primary and secondary weights from this sweep.
+        v_update = np.mean(
+            rho[:, np.newaxis]
+            * (delta - Xv)[:, np.newaxis]
+            * X,
+            axis=0
+        )
+
+        # Apply both batch updates.
+        w += alpha * w_update
+        v += beta * v_update
+
+    return w, v
 
 # Step 23 - follow_on_emphasis (not yet solved)
 # TODO: implement
