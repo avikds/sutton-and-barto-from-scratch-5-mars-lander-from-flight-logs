@@ -1084,8 +1084,135 @@ def importance_ratios(logs):
 
     return rho, rho_to_end
 
-# Step 16 - expected_td_sweeps (not yet solved)
-# TODO: implement
+# Step 16 - expected_td_sweeps
+def expected_td_sweeps(
+    X,
+    X_next,
+    rewards,
+    dones,
+    alpha,
+    n_sweeps,
+    rho=None,
+    emphasis=None,
+    gamma=1.0,
+    w0=None
+):
+    """
+    Run batch (expected) semi-gradient TD updates over a dataset.
+
+    Parameters:
+        X: Feature matrix of current states, shape (T, d).
+        X_next: Feature matrix of next states, shape (T, d).
+        rewards: Reward array, shape (T,).
+        dones: Boolean array indicating terminal transitions.
+        alpha: Step size (learning rate).
+        n_sweeps: Number of batch update sweeps.
+        rho: Optional per-transition importance sampling ratios.
+             Defaults to ones.
+        emphasis: Optional per-transition emphasis weights.
+                  Defaults to ones.
+        gamma: Discount factor, defaulting to 1.0.
+        w0: Optional initial weight vector. Defaults to zeros.
+
+    Returns:
+        A tuple (w, norms):
+
+        w:
+            Final weight vector of shape (d,).
+
+        norms:
+            List of Python floats containing the L2 norm
+            of the weight vector after every sweep.
+    """
+
+    # Convert inputs to NumPy arrays without modifying the originals.
+    X = np.asarray(X, dtype=float)
+    X_next = np.array(X_next, dtype=float, copy=True)
+    rewards = np.asarray(rewards, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+
+    # Determine the number of transitions and feature dimensions.
+    T, d = X.shape
+
+    # Validate the input dimensions.
+    if X_next.shape != (T, d):
+        raise ValueError("X_next must have the same shape as X.")
+
+    if rewards.shape != (T,):
+        raise ValueError("rewards must have shape (T,).")
+
+    if dones.shape != (T,):
+        raise ValueError("dones must have shape (T,).")
+
+    if T == 0:
+        raise ValueError("The transition dataset must not be empty.")
+
+    # Default importance sampling ratios to ones.
+    if rho is None:
+        rho = np.ones(T, dtype=float)
+    else:
+        rho = np.asarray(rho, dtype=float)
+
+        if rho.shape != (T,):
+            raise ValueError("rho must have shape (T,).")
+
+    # Default emphasis weights to ones.
+    if emphasis is None:
+        emphasis = np.ones(T, dtype=float)
+    else:
+        emphasis = np.asarray(emphasis, dtype=float)
+
+        if emphasis.shape != (T,):
+            raise ValueError("emphasis must have shape (T,).")
+
+    # Combine importance sampling ratios and emphasis weights.
+    c = rho * emphasis
+
+    # Initialize the weight vector.
+    # Copy w0 to avoid modifying the caller's original array.
+    if w0 is None:
+        w = np.zeros(d, dtype=float)
+    else:
+        w = np.array(w0, dtype=float, copy=True)
+
+        if w.shape != (d,):
+            raise ValueError("w0 must have shape (d,).")
+
+    # Terminal next states have zero value.
+    X_next[dones] = 0.0
+
+    # Store the L2 norm of the weights after each sweep.
+    norms = []
+
+    # Perform the specified number of batch update sweeps.
+    # Suppress overflow and invalid-value warnings because
+    # divergence is an intended phenomenon in this experiment.
+    with np.errstate(over="ignore", invalid="ignore"):
+
+        for _ in range(n_sweeps):
+
+            # Compute all TD errors using the same current weights.
+            # This ensures that every transition uses the weights
+            # from before the current batch update.
+            deltas = (
+                rewards
+                + gamma * (X_next @ w)
+                - (X @ w)
+            )
+
+            # Calculate the average weighted semi-gradient update.
+            update = np.mean(
+                (c * deltas)[:, np.newaxis] * X,
+                axis=0
+            )
+
+            # Apply one batch weight update.
+            w += alpha * update
+
+            # Record the L2 norm after the completed sweep.
+            norms.append(float(np.linalg.norm(w)))
+
+    return w, norms
 
 # Step 17 - deadly_triad_postmortem (not yet solved)
 # TODO: implement
