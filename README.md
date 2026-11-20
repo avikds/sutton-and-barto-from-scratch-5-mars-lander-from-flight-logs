@@ -26,7 +26,7 @@ python scaffold.py
 - [x] **14.** interest_emphasis_td
 - [x] **15.** importance_ratios
 - [x] **16.** expected_td_sweeps
-- [ ] **17.** deadly_triad_postmortem
+- [x] **17.** deadly_triad_postmortem
 - [ ] **18.** tsitsiklis_van_roy
 - [ ] **19.** baird_counterexample
 - [ ] **20.** value_error_objectives
