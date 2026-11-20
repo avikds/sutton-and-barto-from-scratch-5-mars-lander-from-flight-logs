@@ -1351,8 +1351,67 @@ def deadly_triad_postmortem(logs_b, logs_pi, features, aggregate, tau, n_sweeps)
         "Monte Carlo targets": monte_carlo_targets
     }
 
-# Step 18 - tsitsiklis_van_roy (not yet solved)
-# TODO: implement
+# Step 18 - tsitsiklis_van_roy
+def tsitsiklis_van_roy(w0, gamma, epsilon, n_iters):
+    """
+    Reproduce the Tsitsiklis and Van Roy two-state counterexample
+    using least-squares dynamic programming.
+
+    Parameters:
+        w0: Initial scalar weight.
+        gamma: Discount factor.
+        epsilon: Probability of terminating from the second state.
+        n_iters: Number of least-squares iterations.
+
+    Returns:
+        A float NumPy array containing the initial weight and
+        the weight after every iteration.
+    """
+
+    # Feature values for the two states.
+    # The approximate state values are w and 2*w.
+    x = np.array([1.0, 2.0])
+
+    # Define the transition probability matrix.
+    # State 0 transitions deterministically to state 1.
+    # State 1 remains in state 1 with probability (1 - epsilon).
+    # The remaining probability corresponds to termination.
+    P = np.array([
+        [0.0, 1.0],
+        [0.0, 1.0 - epsilon]
+    ])
+
+    # Initialize the scalar weight.
+    w = float(w0)
+
+    # Store the initial weight before performing any updates.
+    weights = [w]
+
+    # Perform the specified number of least-squares iterations.
+    for _ in range(n_iters):
+
+        # Calculate the current approximate values of both states.
+        current_values = x * w
+
+        # Compute the expected one-step TD targets.
+        # Terminal transitions contribute zero continuation value.
+        targets = gamma * (P @ current_values)
+
+        # Find the least-squares weight that best fits
+        # the expected targets using the feature vector x.
+        w = float(
+            np.linalg.lstsq(
+                x[:, np.newaxis],
+                targets,
+                rcond=None
+            )[0][0]
+        )
+
+        # Record the updated weight.
+        weights.append(w)
+
+    # Return the complete sequence of weights.
+    return np.asarray(weights, dtype=float)
 
 # Step 19 - baird_counterexample (not yet solved)
 # TODO: implement
