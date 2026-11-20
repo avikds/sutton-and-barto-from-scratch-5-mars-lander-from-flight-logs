@@ -231,8 +231,29 @@ def fly(kind, n_flights, rng, start=START):
         "returns": returns
     }
 
-# Step 4 - landing_rate (not yet solved)
-# TODO: implement
+# Step 4 - landing_rate
+def landing_rate(kind, n_flights, rng, start=START):
+    """
+    Estimate an autopilot's probability of landing safely.
+
+    Parameters:
+        kind: Autopilot type ('cautious' or 'fast').
+        n_flights: Number of flights to simulate.
+        rng: Random number generator.
+        start: Initial lander state. Defaults to START.
+
+    Returns:
+        Python float representing the fraction of safe landings.
+    """
+
+    # Simulate the specified number of complete flights.
+    logs = fly(kind, n_flights, rng, start)
+
+    # Select rewards corresponding only to touchdown transitions.
+    final_rewards = logs["rewards"][logs["dones"]]
+
+    # Calculate the mean final reward (Monte Carlo landing rate).
+    return float(np.mean(final_rewards))
 
 # Step 5 - exact_values (not yet solved)
 # TODO: implement
