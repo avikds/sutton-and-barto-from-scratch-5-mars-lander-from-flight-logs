@@ -1660,8 +1660,89 @@ def value_error_objectives(X, w, mu, P, R, v_true, gamma=1.0):
         "TDE": float(TDE)
     }
 
-# Step 21 - td_and_be_solutions (not yet solved)
-# TODO: implement
+# Step 21 - td_and_be_solutions
+def td_and_be_solutions(X, mu, P, R, gamma=1.0):
+    """
+    Compute the TD fixed point and Bellman Error minimiser
+    for a linear value-function approximation.
+
+    Parameters:
+        X: Feature matrix of shape (n, d).
+        mu: State distribution of shape (n,).
+        P: Transition probability matrix of shape (n, n + 1).
+           The last column represents the terminal state.
+        R: Reward matrix of shape (n, n + 1).
+        gamma: Discount factor, defaulting to 1.0.
+
+    Returns:
+        A tuple (w_td, w_be):
+
+        w_td: Least-squares solution of the TD fixed-point system.
+        w_be: Least-squares minimiser of the weighted Bellman Error.
+    """
+
+    # Convert inputs to floating-point NumPy arrays.
+    X = np.asarray(X, dtype=float)
+    mu = np.asarray(mu, dtype=float)
+    P = np.asarray(P, dtype=float)
+    R = np.asarray(R, dtype=float)
+
+    # Determine the number of states and feature dimensions.
+    n, d = X.shape
+
+    # Calculate the expected immediate reward for each state.
+    r_bar = np.sum(P * R, axis=1)
+
+    # Calculate the discounted expected next-state features.
+    # The final column of P represents the terminal state,
+    # which has no associated feature vector.
+    PX = gamma * (P[:, :n] @ X)
+
+    # Construct the diagonal state-distribution matrix.
+    D = np.diag(mu)
+
+    # -------------------------------------------------------
+    # Solution 1: TD fixed point.
+    # -------------------------------------------------------
+
+    # Construct the coefficient matrix:
+    # X.T @ D @ (X - PX).
+    A_td = X.T @ D @ (X - PX)
+
+    # Construct the right-hand side:
+    # X.T @ D @ r_bar.
+    b_td = X.T @ D @ r_bar
+
+    # Solve the TD fixed-point system using least squares.
+    # This also handles singular or underdetermined systems.
+    w_td = np.linalg.lstsq(
+        A_td,
+        b_td,
+        rcond=None
+    )[0]
+
+    # -------------------------------------------------------
+    # Solution 2: Bellman Error minimiser.
+    # -------------------------------------------------------
+
+    # Scale every row by the square root of its state probability.
+    sqrt_mu = np.sqrt(mu)
+
+    # Construct the weighted least-squares coefficient matrix.
+    A_be = sqrt_mu[:, np.newaxis] * (PX - X)
+
+    # Construct the weighted least-squares target.
+    b_be = -sqrt_mu * r_bar
+
+    # Find the weights that minimise the weighted
+    # squared Bellman Error.
+    w_be = np.linalg.lstsq(
+        A_be,
+        b_be,
+        rcond=None
+    )[0]
+
+    return w_td, w_be
 
 # Step 22 - expected_tdc_sweeps (not yet solved)
 # TODO: implement

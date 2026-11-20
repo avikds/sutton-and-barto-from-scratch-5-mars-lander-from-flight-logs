@@ -30,7 +30,7 @@ python scaffold.py
 - [x] **18.** tsitsiklis_van_roy
 - [x] **19.** baird_counterexample
 - [x] **20.** value_error_objectives
-- [ ] **21.** td_and_be_solutions
+- [x] **21.** td_and_be_solutions
 - [ ] **22.** expected_tdc_sweeps
 - [ ] **23.** follow_on_emphasis
 - [ ] **24.** td_lambda
