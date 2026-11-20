@@ -12,7 +12,7 @@ python scaffold.py
 
 - [x] **1.** lander_step
 - [x] **2.** autopilot_probs
-- [ ] **3.** fly
+- [x] **3.** fly
 - [ ] **4.** landing_rate
 - [ ] **5.** exact_values
 - [ ] **6.** polynomial_features

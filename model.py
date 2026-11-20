@@ -126,8 +126,110 @@ def autopilot_probs(state, kind):
 
     return probs
 
-# Step 3 - fly (not yet solved)
-# TODO: implement
+# Step 3 - fly
+def fly(kind, n_flights, rng, start=START):
+    """
+    Simulate complete Mars landing flights and record their transitions.
+
+    Parameters:
+        kind: Autopilot type ('cautious' or 'fast').
+        n_flights: Number of flights to simulate.
+        rng: Random number generator.
+        start: Initial lander state. Defaults to START.
+
+    Returns:
+        A dictionary containing NumPy arrays for:
+        states, actions, rewards, next_states, dones,
+        flight indices, and discounted returns (gamma = 1).
+    """
+
+    # Store transitions from all flights in chronological order.
+    states = []
+    actions = []
+    rewards = []
+    next_states = []
+    dones = []
+    flights = []
+
+    # Simulate the requested number of complete flights.
+    for flight_idx in range(n_flights):
+
+        # Each flight starts from the specified initial state.
+        state = tuple(int(x) for x in start)
+
+        # Continue until the lander touches down.
+        while True:
+
+            # Record the current state before taking an action.
+            states.append(state)
+
+            # Obtain the autopilot's action probabilities.
+            probs = autopilot_probs(state, kind)
+
+            # Sample an action using the inverse cumulative distribution.
+            # The action is always between 0 and 2.
+            action = min(
+                int(np.searchsorted(
+                    np.cumsum(probs),
+                    rng.random(),
+                    side="right"
+                )),
+                2
+            )
+
+            # Advance the lander by one second.
+            # lander_step draws its own random gust.
+            next_state, reward, done = lander_step(
+                state, action, rng
+            )
+
+            # Record the transition.
+            actions.append(int(action))
+            rewards.append(float(reward))
+            next_states.append(next_state)
+            dones.append(bool(done))
+            flights.append(int(flight_idx))
+
+            # Move to the next state.
+            state = next_state
+
+            # End this flight immediately after touchdown.
+            if done:
+                break
+
+    # Convert the recorded transitions into NumPy arrays.
+    states = np.asarray(states, dtype=int).reshape(-1, 3)
+    actions = np.asarray(actions, dtype=int)
+    rewards = np.asarray(rewards, dtype=float)
+    next_states = np.asarray(next_states, dtype=int).reshape(-1, 3)
+    dones = np.asarray(dones, dtype=bool)
+    flights = np.asarray(flights, dtype=int)
+
+    # Compute the undiscounted return (gamma = 1) for every transition.
+    # Returns are calculated backwards and reset at flight boundaries.
+    returns = np.zeros(len(rewards), dtype=float)
+    G = 0.0
+
+    for t in range(len(rewards) - 1, -1, -1):
+
+        # Reset the cumulative return when entering a new flight
+        # during the backward pass.
+        if t == len(rewards) - 1 or flights[t] != flights[t + 1]:
+            G = 0.0
+
+        G = rewards[t] + G
+        returns[t] = G
+
+    # Return the complete flight-log dataset.
+    return {
+        "states": states,
+        "actions": actions,
+        "rewards": rewards,
+        "next_states": next_states,
+        "dones": dones,
+        "flight": flights,
+        "returns": returns
+    }
 
 # Step 4 - landing_rate (not yet solved)
 # TODO: implement
