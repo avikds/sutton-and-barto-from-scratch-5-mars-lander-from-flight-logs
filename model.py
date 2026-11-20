@@ -694,8 +694,34 @@ def tile_features(states, n_tilings, tiles_per_dim):
 
     return features
 
-# Step 10 - step_size_rule (not yet solved)
-# TODO: implement
+# Step 10 - step_size_rule
+def step_size_rule(X, tau):
+    """
+    Calculate the recommended step size for a linear function
+    approximation method using Sutton and Barto's rule of thumb.
+
+    Parameters:
+        X: Feature matrix of shape (n, d), where each row
+           represents one feature vector.
+        tau: Expected number of presentations of a feature vector.
+
+    Returns:
+        Python float representing the recommended step size.
+    """
+
+    # Convert the feature matrix into a floating-point NumPy array.
+    X = np.asarray(X, dtype=float)
+
+    # Calculate the squared Euclidean norm of each feature vector.
+    squared_norms = np.sum(X ** 2, axis=1)
+
+    # Estimate the expected squared norm using the mean across all rows.
+    mean_squared_norm = np.mean(squared_norms)
+
+    # Apply Sutton and Barto's recommended step-size rule.
+    alpha = 1.0 / (tau * mean_squared_norm)
+
+    return float(alpha)
 
 # Step 11 - semi_gradient_td (not yet solved)
 # TODO: implement

@@ -19,7 +19,7 @@ python scaffold.py
 - [x] **7.** fourier_features
 - [x] **8.** rbf_features
 - [x] **9.** tile_features
-- [ ] **10.** step_size_rule
+- [x] **10.** step_size_rule
 - [ ] **11.** semi_gradient_td
 - [ ] **12.** lstd
 - [ ] **13.** kernel_value
