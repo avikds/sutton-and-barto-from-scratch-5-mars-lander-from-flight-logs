@@ -791,8 +791,95 @@ def semi_gradient_td(X, X_next, rewards, dones, alpha, rho=None, gamma=1.0):
 
     return w
 
-# Step 12 - lstd (not yet solved)
-# TODO: implement
+# Step 12 - lstd
+def lstd(X, X_next, rewards, dones, epsilon=1e-3, rho=None, gamma=1.0):
+    """
+    Compute the TD fixed-point solution using Least-Squares TD (LSTD).
+
+    The inverse matrix is maintained incrementally using the
+    Sherman-Morrison formula.
+
+    Parameters:
+        X: Feature matrix of current states, shape (T, d).
+        X_next: Feature matrix of next states, shape (T, d).
+        rewards: Reward array, shape (T,).
+        dones: Boolean array indicating terminal transitions, shape (T,).
+        epsilon: Positive regularization parameter.
+        rho: Optional per-transition importance sampling ratios.
+             Defaults to 1 for every transition.
+        gamma: Discount factor, defaulting to 1.0.
+
+    Returns:
+        Weight vector of shape (d,).
+    """
+
+    # Convert inputs to floating-point arrays without modifying originals.
+    X = np.asarray(X, dtype=float)
+    X_next = np.array(X_next, dtype=float, copy=True)
+    rewards = np.asarray(rewards, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+
+    # Extract the number of transitions and feature dimensions.
+    T, d = X.shape
+
+    # Validate input dimensions.
+    if X_next.shape != (T, d):
+        raise ValueError("X_next must have the same shape as X.")
+
+    if rewards.shape != (T,):
+        raise ValueError("rewards must have shape (T,).")
+
+    if dones.shape != (T,):
+        raise ValueError("dones must have shape (T,).")
+
+    if epsilon <= 0:
+        raise ValueError("epsilon must be positive.")
+
+    # Default to unit importance sampling ratios.
+    if rho is None:
+        rho = np.ones(T, dtype=float)
+    else:
+        rho = np.asarray(rho, dtype=float)
+
+        if rho.shape != (T,):
+            raise ValueError("rho must have shape (T,).")
+
+    # Terminal next states have zero value.
+    X_next[dones] = 0.0
+
+    # Initialize the inverse regularized matrix.
+    A_inv = np.eye(d, dtype=float) / epsilon
+
+    # Initialize the reward-weighted feature vector.
+    b = np.zeros(d, dtype=float)
+
+    # Process every transition in chronological order.
+    for t in range(T):
+
+        # Current-state feature vector.
+        x = X[t]
+
+        # Define the second vector of the rank-one matrix update.
+        # The corresponding matrix contribution is x @ u.T.
+        u = rho[t] * (x - gamma * X_next[t])
+
+        # Compute A_inv @ x.
+        A_inv_x = A_inv @ x
+
+        # Compute A_inv.T @ u for the Sherman-Morrison update.
+        # This preserves the correct nonsymmetric LSTD matrix.
+        v = A_inv.T @ u
+
+        # Sherman-Morrison rank-one inverse update.
+        denominator = 1.0 + v @ x
+
+        A_inv -= np.outer(A_inv_x, v) / denominator
+
+        # Accumulate the reward-weighted feature vector.
+        b += rho[t] * rewards[t] * x
+
+    # Return the LSTD solution.
+    return A_inv @ b
 
 # Step 13 - kernel_value (not yet solved)
 # TODO: implement
