@@ -610,8 +610,89 @@ def rbf_features(states, centers, sigma):
 
     return features
 
-# Step 9 - tile_features (not yet solved)
-# TODO: implement
+# Step 9 - tile_features
+def tile_features(states, n_tilings, tiles_per_dim):
+    """
+    Build a tile-coded feature representation of normalized lander states.
+
+    Parameters:
+        states: A single state (h, v, f) or an array of states
+                with shape (n, 3).
+        n_tilings: Number of offset grids.
+        tiles_per_dim: Number of tiles along each state dimension.
+
+    Returns:
+        A binary float NumPy array of shape
+        (n, n_tilings * (tiles_per_dim + 1) ** 3).
+
+        Exactly one tile is active per tiling for every state.
+    """
+
+    # Normalize the lander states into the [0, 1] range.
+    normalized = unit_states(states)
+
+    # Validate the tiling parameters.
+    if n_tilings <= 0:
+        raise ValueError("n_tilings must be positive.")
+
+    if tiles_per_dim <= 0:
+        raise ValueError("tiles_per_dim must be positive.")
+
+    # Number of tiles along each dimension.
+    k = tiles_per_dim
+
+    # Each tiling contains (k + 1)^3 features.
+    # The extra tile in each dimension absorbs grid offsets.
+    tiles_per_tiling = (k + 1) ** 3
+
+    # Allocate the complete binary feature matrix.
+    n_samples = normalized.shape[0]
+
+    features = np.zeros(
+        (n_samples, n_tilings * tiles_per_tiling),
+        dtype=float
+    )
+
+    # Asymmetric displacement vector specified by Sutton and Barto.
+    displacement = np.array([1, 3, 5])
+
+    # Row indices used to activate one feature per state.
+    rows = np.arange(n_samples)
+
+    # Construct each offset tiling.
+    for t in range(n_tilings):
+
+        # Calculate the offset for the current tiling.
+        offset = (
+            (t * displacement) % n_tilings
+        ) / (n_tilings * k)
+
+        # Calculate the tile index along each state dimension.
+        # Indices are clipped to k to account for the extra boundary tile.
+        tile_indices = np.minimum(
+            np.floor((normalized + offset) * k),
+            k
+        ).astype(int)
+
+        # Extract the individual dimension indices.
+        i_h = tile_indices[:, 0]
+        i_v = tile_indices[:, 1]
+        i_f = tile_indices[:, 2]
+
+        # Flatten the three-dimensional tile coordinates.
+        local_indices = (
+            (i_h * (k + 1) + i_v) * (k + 1) + i_f
+        )
+
+        # Assign each tiling its own consecutive feature block.
+        active_indices = (
+            t * tiles_per_tiling + local_indices
+        )
+
+        # Activate exactly one tile for every state in this tiling.
+        features[rows, active_indices] = 1.0
+
+    return features
 
 # Step 10 - step_size_rule (not yet solved)
 # TODO: implement
