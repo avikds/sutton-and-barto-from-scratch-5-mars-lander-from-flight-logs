@@ -488,8 +488,77 @@ def polynomial_features(states, order=1, scale=None):
 
     return features
 
-# Step 7 - fourier_features (not yet solved)
-# TODO: implement
+# Step 7 - fourier_features
+def unit_states(states):
+    """
+    Normalize lander states into the [0, 1] range.
+
+    Parameters:
+        states: A single state (h, v, f) or an array
+                of states with shape (n, 3).
+
+    Returns:
+        A float NumPy array of shape (n, 3).
+    """
+
+    # Convert the input into a floating-point NumPy array.
+    states = np.asarray(states, dtype=float)
+
+    # Ensure a single state is represented as a 2D array.
+    if states.ndim == 1:
+        states = states.reshape(1, -1)
+
+    # Validate the state dimensions.
+    if states.ndim != 2 or states.shape[1] != 3:
+        raise ValueError("states must have shape (n, 3) or contain one state.")
+
+    # Extract altitude, vertical velocity, and fuel.
+    h = states[:, 0]
+    v = states[:, 1]
+    f = states[:, 2]
+
+    # Normalize each state component into the [0, 1] range.
+    normalized = np.column_stack([
+        h / MAX_ALTITUDE,
+        (v + MAX_SPEED) / (2 * MAX_SPEED),
+        f / MAX_FUEL
+    ])
+
+    return normalized
+
+
+def fourier_features(states, order):
+    """
+    Build an order-based Fourier cosine feature representation.
+
+    Parameters:
+        states: A single state (h, v, f) or an array
+                of states with shape (n, 3).
+        order: Maximum integer coefficient for each dimension.
+
+    Returns:
+        A float NumPy array of shape (n, (order + 1) ** 3).
+    """
+
+    # Normalize the input states before computing Fourier features.
+    normalized = unit_states(states)
+
+    # Generate all possible integer coefficient vectors.
+    # Each vector is represented as (c_h, c_v, c_f).
+    coefficients = np.array(
+        list(itertools.product(range(order + 1), repeat=3)),
+        dtype=float
+    )
+
+    # Calculate the dot product between each normalized state
+    # and every coefficient vector.
+    dot_products = normalized @ coefficients.T
+
+    # Apply the Fourier cosine transformation.
+    # The resulting first feature is always cos(0) = 1.
+    features = np.cos(np.pi * dot_products)
+
+    return features
 
 # Step 8 - rbf_features (not yet solved)
 # TODO: implement
