@@ -20,7 +20,7 @@ python scaffold.py
 - [x] **8.** rbf_features
 - [x] **9.** tile_features
 - [x] **10.** step_size_rule
-- [ ] **11.** semi_gradient_td
+- [x] **11.** semi_gradient_td
 - [ ] **12.** lstd
 - [ ] **13.** kernel_value
 - [ ] **14.** interest_emphasis_td

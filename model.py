@@ -723,8 +723,73 @@ def step_size_rule(X, tau):
 
     return float(alpha)
 
-# Step 11 - semi_gradient_td (not yet solved)
-# TODO: implement
+# Step 11 - semi_gradient_td
+def semi_gradient_td(X, X_next, rewards, dones, alpha, rho=None, gamma=1.0):
+    """
+    Run one online pass of linear semi-gradient TD(0).
+
+    Parameters:
+        X: Feature matrix of current states, shape (T, d).
+        X_next: Feature matrix of next states, shape (T, d).
+        rewards: Reward array, shape (T,).
+        dones: Boolean array indicating terminal transitions, shape (T,).
+        alpha: Step size (learning rate).
+        rho: Optional per-transition importance sampling ratios.
+             Defaults to 1 for every transition.
+        gamma: Discount factor, defaulting to 1.0.
+
+    Returns:
+        Final weight vector w of shape (d,).
+    """
+
+    # Convert inputs to NumPy arrays without modifying the originals.
+    X = np.asarray(X, dtype=float)
+    X_next = np.array(X_next, dtype=float, copy=True)
+    rewards = np.asarray(rewards, dtype=float)
+    dones = np.asarray(dones, dtype=bool)
+
+    # Extract the number of transitions and feature dimensions.
+    T, d = X.shape
+
+    # Validate the input dimensions.
+    if X_next.shape != (T, d):
+        raise ValueError("X_next must have the same shape as X.")
+
+    if rewards.shape != (T,):
+        raise ValueError("rewards must have shape (T,).")
+
+    if dones.shape != (T,):
+        raise ValueError("dones must have shape (T,).")
+
+    # Use unit importance sampling ratios for on-policy learning.
+    if rho is None:
+        rho = np.ones(T, dtype=float)
+    else:
+        rho = np.asarray(rho, dtype=float)
+
+        if rho.shape != (T,):
+            raise ValueError("rho must have shape (T,).")
+
+    # Terminal states have zero value, so zero their next-state features.
+    X_next[dones] = 0.0
+
+    # Initialize the weight vector with zeros.
+    w = np.zeros(d, dtype=float)
+
+    # Process transitions sequentially using online updates.
+    for t in range(T):
+
+        # Calculate the TD error using the current weight vector.
+        delta = (
+            rewards[t]
+            + gamma * np.dot(w, X_next[t])
+            - np.dot(w, X[t])
+        )
+
+        # Apply the semi-gradient TD(0) weight update.
+        w += alpha * rho[t] * delta * X[t]
+
+    return w
 
 # Step 12 - lstd (not yet solved)
 # TODO: implement
